@@ -161,7 +161,7 @@ function serializeWorld(world) {
   return {
     tick: world.tick,
     stats: world.stats,
-    food: world.food.map((f) => ({ x: Math.round(f.x), y: Math.round(f.y) })),
+    food: world.food.map((f) => ({ id: f.id, x: Math.round(f.x), y: Math.round(f.y) })),
     creatures: world.creatures.map((c) => ({
       id: c.id,
       x: Math.round(c.x),
