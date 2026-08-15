@@ -20,7 +20,7 @@ A small, closed world of digital creatures whose only inheritance is a neural ne
 <p align="center">
   <img src="docs/screenshot-wide.png" alt="Glimmerlings — the live ecosystem, full population view" width="100%" />
 </p>
-<p align="center"><sub>A live capture of the actual running world — not a mockup.</sub></p>
+<p align="center"><sub>A live capture of the actual running world — not a mockup. The stats panel updates every tick; the population graph fills in as you watch.</sub></p>
 
 ## 🪞 the reference point
 
@@ -124,7 +124,7 @@ Simulation cost stays flat regardless of viewer count — only the WebSocket bro
 - [x] persistent, server-authoritative world
 - [x] pixel-art creatures with live mood indicators (🍎 hungry · ❤️ just fed · ✨ newborn)
 - [ ] two-parent crossover, not just mutation
-- [ ] a population/generations graph over time
+- [x] a live stats panel (avg energy/age/generation, food, births/deaths) with a population sparkline
 - [ ] click a creature → inspect its genome live
 - [ ] optional gradient-based RL path once neuroevolution plateaus
 
@@ -162,7 +162,7 @@ Mały, zamknięty świat cyfrowych istot, których jedynym dziedzictwem jest sie
 <p align="center">
   <img src="docs/screenshot-wide.png" alt="Glimmerlings — żywy ekosystem, pełna populacja" width="100%" />
 </p>
-<p align="center"><sub>Prawdziwy zrzut z działającego świata — nie makieta.</sub></p>
+<p align="center"><sub>Prawdziwy zrzut z działającego świata — nie makieta. Panel statystyk aktualizuje się co tick, a wykres populacji zapełnia się w miarę oglądania.</sub></p>
 
 ## 🪞 punkt odniesienia
 
@@ -230,7 +230,7 @@ Koszt symulacji jest stały niezależnie od liczby widzów — skaluje się tylk
 - [x] trwały świat autorytatywny po stronie serwera
 - [x] pikselowe istoty z żywymi wskaźnikami nastroju (🍎 głodny · ❤️ najedzony · ✨ nowo narodzony)
 - [ ] krzyżowanie dwojga rodziców, nie tylko mutacja
-- [ ] wykres populacji/pokoleń w czasie
+- [x] panel statystyk na żywo (śr. energia/wiek/generacja, jedzenie, narodziny/zgony) z wykresem populacji
 - [ ] kliknięcie w istotę → podgląd jej genomu na żywo
 - [ ] opcjonalna ścieżka RL oparta na gradiencie, gdy neuroewolucja osiągnie plateau
 

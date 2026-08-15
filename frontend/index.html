@@ -6,18 +6,85 @@
 <title>Glimmerlings — a living ecosystem</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AC%3C/text%3E%3C/svg%3E" />
 <style>
-  html, body { margin: 0; height: 100%; background: #0b1a12; overflow: hidden; }
-  body { font-family: system-ui, sans-serif; color: #eaf5ea; }
-  #hud {
-    position: absolute; top: 12px; left: 12px;
-    background: rgba(0, 0, 0, 0.5); padding: 8px 14px; border-radius: 8px;
-    font-size: 14px; line-height: 1.5; backdrop-filter: blur(2px);
+  :root {
+    --bg: #0b1a12;
+    --panel-bg: rgba(6, 14, 10, 0.82);
+    --panel-border: rgba(61, 220, 132, 0.35);
+    --accent: #3ddc84;
+    --accent-cyan: #22d3ee;
+    --accent-amber: #f59e0b;
+    --text: #eafff0;
+    --label: #7fa691;
   }
-  canvas { display: block; }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
+  body { font-family: system-ui, sans-serif; color: var(--text); }
+  canvas#world { display: block; }
+
+  #hud {
+    position: absolute; top: 12px; left: 12px; z-index: 2;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 10px 14px 12px;
+    backdrop-filter: blur(3px);
+    font-family: 'Courier New', monospace;
+    min-width: 240px;
+  }
+  #hud .title {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; letter-spacing: 2px; color: var(--accent);
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  #hud .title .dot {
+    color: var(--accent); animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+  #hud .status {
+    font-size: 11px; color: var(--label); margin-bottom: 8px;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 14px;
+  }
+  .stat { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
+  .stat .label { color: var(--label); letter-spacing: 0.5px; }
+  .stat .value { color: var(--text); font-weight: bold; }
+  .stat .value.cyan { color: var(--accent-cyan); }
+  .stat .value.amber { color: var(--accent-amber); }
+
+  #chart-wrap { margin-top: 10px; }
+  #chart-label {
+    font-size: 10px; color: var(--label); letter-spacing: 0.5px;
+    margin-bottom: 2px; display: flex; justify-content: space-between;
+  }
+  #pop-chart { display: block; width: 100%; height: 40px; }
 </style>
 </head>
 <body>
-<div id="hud">Connecting to the ecosystem…</div>
+<div id="hud">
+  <div class="title"><span class="dot">●</span> GLIMMERLINGS · LIVE</div>
+  <div class="status" id="s-status">connecting…</div>
+  <div class="stat-grid">
+    <div class="stat"><span class="label">tick</span><span class="value" id="s-tick">–</span></div>
+    <div class="stat"><span class="label">population</span><span class="value" id="s-pop">–</span></div>
+    <div class="stat"><span class="label">food</span><span class="value" id="s-food">–</span></div>
+    <div class="stat"><span class="label">best gen</span><span class="value cyan" id="s-bestgen">–</span></div>
+    <div class="stat"><span class="label">avg gen</span><span class="value cyan" id="s-avggen">–</span></div>
+    <div class="stat"><span class="label">avg energy</span><span class="value" id="s-avgenergy">–</span></div>
+    <div class="stat"><span class="label">avg age</span><span class="value" id="s-avgage">–</span></div>
+    <div class="stat"><span class="label">born</span><span class="value" id="s-born">–</span></div>
+    <div class="stat"><span class="label">died</span><span class="value amber" id="s-died">–</span></div>
+    <div class="stat"><span class="label">world age</span><span class="value" id="s-uptime">–</span></div>
+  </div>
+  <div id="chart-wrap">
+    <div id="chart-label"><span>population</span><span>~3 min window</span></div>
+    <canvas id="pop-chart" width="240" height="40"></canvas>
+  </div>
+</div>
 <canvas id="world"></canvas>
 <script src="viewer.js"></script>
 </body>

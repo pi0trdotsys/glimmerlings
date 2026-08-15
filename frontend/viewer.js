@@ -7,8 +7,28 @@ const WORLD_H = 800;
 
 const canvas = document.getElementById('world');
 const ctx = canvas.getContext('2d');
-const hud = document.getElementById('hud');
 ctx.imageSmoothingEnabled = false;
+
+// Ticks are broadcast every TICK_MS on the backend (see backend/src/index.js).
+// Used only to render a "world age" clock — an approximation, not a
+// precise wall-clock measurement.
+const TICK_MS = 120;
+
+const el = {
+  status: document.getElementById('s-status'),
+  tick: document.getElementById('s-tick'),
+  pop: document.getElementById('s-pop'),
+  food: document.getElementById('s-food'),
+  bestGen: document.getElementById('s-bestgen'),
+  avgGen: document.getElementById('s-avggen'),
+  avgEnergy: document.getElementById('s-avgenergy'),
+  avgAge: document.getElementById('s-avgage'),
+  born: document.getElementById('s-born'),
+  died: document.getElementById('s-died'),
+  uptime: document.getElementById('s-uptime'),
+};
+const popChart = document.getElementById('pop-chart');
+const popChartCtx = popChart.getContext('2d');
 
 function resize() {
   const scale = Math.min(window.innerWidth / WORLD_W, window.innerHeight / WORLD_H);
@@ -215,27 +235,97 @@ function drawMood(c) {
 
 let latest = null;
 
+// Rolling population history, sampled once per incoming tick (not per
+// animation frame) so the sparkline's time axis tracks simulated time
+// rather than the viewer's frame rate. ~1500 samples at 120ms/tick is
+// roughly a 3-minute window.
+const POP_HISTORY_MAX = 1500;
+const popHistory = [];
+
+function formatWorldAge(tick) {
+  const totalSeconds = Math.floor((tick * TICK_MS) / 1000);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 function connect() {
   const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${protocol}://${location.host}`);
 
   ws.onopen = () => {
-    hud.textContent = 'Connected to the ecosystem';
+    el.status.textContent = 'connected';
   };
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
     if (data.type === 'world') {
       updateMoods(data.creatures);
       latest = data;
+
+      popHistory.push(data.creatures.length);
+      if (popHistory.length > POP_HISTORY_MAX) popHistory.shift();
     }
   };
   ws.onclose = () => {
-    hud.textContent = 'Disconnected — retrying in 2s…';
+    el.status.textContent = 'disconnected — retrying in 2s…';
     setTimeout(connect, 2000);
   };
   ws.onerror = () => ws.close();
 }
 connect();
+
+function drawPopChart() {
+  const w = popChart.width;
+  const h = popChart.height;
+  popChartCtx.clearRect(0, 0, w, h);
+  if (popHistory.length < 2) return;
+
+  const max = Math.max(...popHistory, 1);
+  const min = Math.min(...popHistory, 0);
+  const range = Math.max(max - min, 1);
+  const step = w / (POP_HISTORY_MAX - 1);
+  const offset = POP_HISTORY_MAX - popHistory.length;
+
+  popChartCtx.beginPath();
+  popHistory.forEach((v, i) => {
+    const x = (offset + i) * step;
+    const y = h - ((v - min) / range) * (h - 4) - 2;
+    if (i === 0) popChartCtx.moveTo(x, y);
+    else popChartCtx.lineTo(x, y);
+  });
+  popChartCtx.strokeStyle = '#3ddc84';
+  popChartCtx.lineWidth = 1.5;
+  popChartCtx.stroke();
+
+  popChartCtx.lineTo((offset + popHistory.length - 1) * step, h);
+  popChartCtx.lineTo(offset * step, h);
+  popChartCtx.closePath();
+  popChartCtx.fillStyle = 'rgba(61, 220, 132, 0.12)';
+  popChartCtx.fill();
+}
+
+function updateStats() {
+  const creatures = latest.creatures;
+  const n = creatures.length || 1;
+  const avgEnergy = creatures.reduce((sum, c) => sum + c.energy, 0) / n;
+  const avgAge = creatures.reduce((sum, c) => sum + c.age, 0) / n;
+  const avgGen = creatures.reduce((sum, c) => sum + c.generation, 0) / n;
+
+  el.status.textContent = 'connected';
+  el.tick.textContent = latest.tick;
+  el.pop.textContent = latest.creatures.length;
+  el.food.textContent = latest.food.length;
+  el.bestGen.textContent = latest.stats.bestGeneration;
+  el.avgGen.textContent = avgGen.toFixed(1);
+  el.avgEnergy.textContent = Math.round(avgEnergy);
+  el.avgAge.textContent = Math.round(avgAge);
+  el.born.textContent = latest.stats.totalBorn;
+  el.died.textContent = latest.stats.totalDied;
+  el.uptime.textContent = formatWorldAge(latest.tick);
+}
 
 function draw(timestamp) {
   requestAnimationFrame(draw);
@@ -251,9 +341,7 @@ function draw(timestamp) {
     drawMood(c);
   }
 
-  hud.textContent =
-    `Tick ${latest.tick} · Population ${latest.creatures.length} · ` +
-    `Best generation ${latest.stats.bestGeneration} · ` +
-    `Born ${latest.stats.totalBorn} · Died ${latest.stats.totalDied}`;
+  updateStats();
+  drawPopChart();
 }
 requestAnimationFrame(draw);
