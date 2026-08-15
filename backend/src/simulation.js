@@ -186,6 +186,27 @@ function tick(world) {
   return world;
 }
 
+// Static simulation parameters, exposed to the frontend's technical
+// panel via GET /config. This is the single source of truth for these
+// numbers — the frontend fetches and displays them rather than keeping
+// its own hand-copied constants that could quietly drift out of sync.
+function getConfig() {
+  return {
+    world: { width: WORLD_W, height: WORLD_H },
+    population: { start: START_POPULATION, min: MIN_POPULATION, max: MAX_POPULATION },
+    food: { cap: MAX_FOOD, initial: INITIAL_FOOD, spawnChance: FOOD_SPAWN_CHANCE, eatRadius: EAT_RADIUS },
+    energy: {
+      start: START_ENERGY,
+      decayPerTick: ENERGY_DECAY,
+      gainOnEat: EAT_ENERGY,
+      reproduceThreshold: REPRODUCE_THRESHOLD,
+      reproduceCost: REPRODUCE_COST,
+      reproduceChancePerTick: REPRODUCE_CHANCE,
+    },
+    movement: { maxSpeed: MAX_SPEED },
+  };
+}
+
 function serializeWorld(world) {
   return {
     tick: world.tick,
@@ -208,6 +229,7 @@ module.exports = {
   restoreIdCounter,
   tick,
   serializeWorld,
+  getConfig,
   WORLD_W,
   WORLD_H,
 };

@@ -84,8 +84,8 @@ No gradient descent, no reward function, no backprop — this is **neuroevolutio
   <text x="24" y="384" style="font-family:'Courier New',monospace;font-size:11px;fill:#5b6d64;">one persistent world · zero resets · alive whether anyone is watching or not</text>
 </svg>
 
-- **`backend/`** — Node.js. Holds the entire world in memory and ticks it every ~120ms: creatures sense, decide (via their network), move, eat, starve, reproduce with a mutated copy of their genome. Broadcasts state to every connected client over WebSocket.
-- **`frontend/`** — static Canvas viewer. Renders only — it never simulates. Every visitor watches the same live population, not a private copy.
+- **`backend/`** — Node.js. Holds the entire world in memory and ticks it every ~120ms: creatures sense, decide (via their network), move, eat, starve, reproduce with a mutated copy of their genome. Broadcasts state to every connected client over WebSocket. Also serves `GET /config` — a one-time snapshot of the static simulation constants (network shape, mutation rate, energy/reproduction thresholds, world size), so the frontend's technical panel reads real values instead of a hand-copied, driftable duplicate.
+- **`frontend/`** — static Canvas viewer. Renders only — it never simulates. Every visitor watches the same live population, not a private copy. Layout is fully fluid: the world canvas claims whatever space is left after the stats/technical panels below it, on anything from a phone to an ultrawide monitor.
 - **PostgreSQL** — a full snapshot (positions, energy, genomes) every 30s, so a container restart resumes evolution instead of restarting it.
 - **Cloudflare Tunnel** — the outbound-only path that makes a home server publicly reachable without opening a single port or leaking the home IP.
 
@@ -190,8 +190,8 @@ Glimmerlings nie twierdzi, że jest świadomy — nikt przy zdrowych zmysłach b
 
 *(diagram — patrz sekcja "🗺️ architecture" w wersji angielskiej powyżej ↑ — jest czysto techniczny, więc nie tłumaczę go osobno)*
 
-- **`backend/`** — Node.js. Trzyma cały świat w pamięci i tyka co ~120ms: stworzenia wyczuwają otoczenie, decydują (przez swoją sieć), poruszają się, jedzą, głodują, rozmnażają się z zmutowaną kopią genomu. Rozgłasza stan do każdego podłączonego klienta przez WebSocket.
-- **`frontend/`** — statyczny widok Canvas. Tylko renderuje — nigdy nie liczy symulacji. Każdy odwiedzający ogląda tę samą, żywą populację, nie prywatną kopię.
+- **`backend/`** — Node.js. Trzyma cały świat w pamięci i tyka co ~120ms: stworzenia wyczuwają otoczenie, decydują (przez swoją sieć), poruszają się, jedzą, głodują, rozmnażają się z zmutowaną kopią genomu. Rozgłasza stan do każdego podłączonego klienta przez WebSocket. Serwuje też `GET /config` — jednorazowy zrzut statycznych parametrów symulacji (kształt sieci, tempo mutacji, progi energii/reprodukcji, rozmiar świata), dzięki czemu panel techniczny na froncie pokazuje realne wartości zamiast ręcznie przepisanej, podatnej na rozjazd kopii.
+- **`frontend/`** — statyczny widok Canvas. Tylko renderuje — nigdy nie liczy symulacji. Każdy odwiedzający ogląda tę samą, żywą populację, nie prywatną kopię. Układ jest w pełni płynny: canvas świata zajmuje tyle miejsca, ile zostanie po panelach statystyk/technicznym pod nim — od telefonu po ultrapanoramiczny monitor.
 - **PostgreSQL** — pełny snapshot (pozycje, energia, genomy) co 30s, więc restart kontenera wznawia ewolucję zamiast zaczynać ją od nowa.
 - **Cloudflare Tunnel** — połączenie wyłącznie wychodzące, dzięki któremu domowy serwer jest publicznie dostępny bez otwierania jakiegokolwiek portu i bez ujawniania domowego adresu IP.
 

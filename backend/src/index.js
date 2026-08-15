@@ -7,6 +7,7 @@ const { WebSocketServer, WebSocket } = require('ws');
 
 const db = require('./db');
 const sim = require('./simulation');
+const nn = require('./neuralNet');
 
 const PORT = process.env.PORT || 8080;
 const TICK_MS = 120;
@@ -28,6 +29,24 @@ async function main() {
   app.use(express.static(path.join(__dirname, '..', 'frontend')));
   app.get('/health', (_req, res) =>
     res.json({ ok: true, tick: world.tick, population: world.creatures.length })
+  );
+
+  // Static architecture/parameter info for the frontend's technical
+  // panel. Fetched once on page load, not per tick — this doesn't
+  // change while the process is running.
+  app.get('/config', (_req, res) =>
+    res.json({
+      tickIntervalMs: TICK_MS,
+      network: {
+        inputs: nn.INPUT_SIZE,
+        hidden: nn.HIDDEN_SIZE,
+        outputs: nn.OUTPUT_SIZE,
+        genomeSize: nn.genomeSize(),
+        mutationRate: nn.MUTATION_RATE,
+        mutationStrength: nn.MUTATION_STRENGTH,
+      },
+      ...sim.getConfig(),
+    })
   );
 
   const server = http.createServer(app);

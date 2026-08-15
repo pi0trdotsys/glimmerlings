@@ -8,51 +8,62 @@
 <style>
   :root {
     --bg: #0b1a12;
-    --panel-bg: rgba(6, 14, 10, 0.82);
-    --panel-border: rgba(61, 220, 132, 0.35);
+    --panel-bg: rgba(6, 14, 10, 0.92);
+    --panel-border: rgba(61, 220, 132, 0.25);
     --accent: #3ddc84;
     --accent-cyan: #22d3ee;
     --accent-amber: #f59e0b;
     --text: #eafff0;
     --label: #7fa691;
   }
-  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
-  body { font-family: system-ui, sans-serif; color: var(--text); }
-  canvas#world { display: block; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+    font-family: system-ui, sans-serif;
+  }
 
-  #hud {
-    position: absolute; top: 12px; left: 12px; z-index: 2;
+  #app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* The work area always gets first claim on available height — it only
+     yields space to the panels below once it has at least this much. */
+  #stage {
+    flex: 1 1 auto; min-height: 42vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 8px; overflow: hidden;
+  }
+  canvas#world { display: block; max-width: 100%; max-height: 100%; }
+
+  #panels {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 12px;
+    padding: 0 12px 16px;
+  }
+  .panel {
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
     border-radius: 10px;
-    padding: 10px 14px 12px;
-    backdrop-filter: blur(3px);
+    padding: 12px 16px 14px;
     font-family: 'Courier New', monospace;
-    min-width: 240px;
   }
-  #hud .title {
+  .panel .title {
     display: flex; align-items: center; gap: 6px;
     font-size: 12px; letter-spacing: 2px; color: var(--accent);
     text-transform: uppercase; margin-bottom: 8px;
   }
-  #hud .title .dot {
-    color: var(--accent); animation: pulse 1.6s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.25; }
-  }
-  #hud .status {
-    font-size: 11px; color: var(--label); margin-bottom: 8px;
-  }
+  .panel .title .dot { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .panel .status { font-size: 11px; color: var(--label); margin-bottom: 8px; }
+
   .stat-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px 14px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 6px 16px;
   }
   .stat { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
   .stat .label { color: var(--label); letter-spacing: 0.5px; }
-  .stat .value { color: var(--text); font-weight: bold; }
+  .stat .value { color: var(--text); font-weight: bold; text-align: right; }
   .stat .value.cyan { color: var(--accent-cyan); }
   .stat .value.amber { color: var(--accent-amber); }
 
@@ -61,31 +72,92 @@
     font-size: 10px; color: var(--label); letter-spacing: 0.5px;
     margin-bottom: 2px; display: flex; justify-content: space-between;
   }
-  #pop-chart { display: block; width: 100%; height: 40px; }
+  #pop-chart { display: block; width: 100%; height: 48px; }
+
+  .tech-group { margin-bottom: 10px; }
+  .tech-group:last-child { margin-bottom: 0; }
+  .tech-group .group-label {
+    font-size: 10px; letter-spacing: 1px; color: var(--label);
+    text-transform: uppercase; margin-bottom: 4px;
+  }
 </style>
 </head>
 <body>
-<div id="hud">
-  <div class="title"><span class="dot">●</span> GLIMMERLINGS · LIVE</div>
-  <div class="status" id="s-status">connecting…</div>
-  <div class="stat-grid">
-    <div class="stat"><span class="label">tick</span><span class="value" id="s-tick">–</span></div>
-    <div class="stat"><span class="label">population</span><span class="value" id="s-pop">–</span></div>
-    <div class="stat"><span class="label">food</span><span class="value" id="s-food">–</span></div>
-    <div class="stat"><span class="label">best gen</span><span class="value cyan" id="s-bestgen">–</span></div>
-    <div class="stat"><span class="label">avg gen</span><span class="value cyan" id="s-avggen">–</span></div>
-    <div class="stat"><span class="label">avg energy</span><span class="value" id="s-avgenergy">–</span></div>
-    <div class="stat"><span class="label">avg age</span><span class="value" id="s-avgage">–</span></div>
-    <div class="stat"><span class="label">born</span><span class="value" id="s-born">–</span></div>
-    <div class="stat"><span class="label">died</span><span class="value amber" id="s-died">–</span></div>
-    <div class="stat"><span class="label">world age</span><span class="value" id="s-uptime">–</span></div>
+<div id="app">
+  <div id="stage">
+    <canvas id="world"></canvas>
   </div>
-  <div id="chart-wrap">
-    <div id="chart-label"><span>population</span><span>~3 min window</span></div>
-    <canvas id="pop-chart" width="240" height="40"></canvas>
+
+  <div id="panels">
+    <section class="panel" id="stats-panel">
+      <div class="title"><span class="dot">●</span> GLIMMERLINGS · LIVE</div>
+      <div class="status" id="s-status">connecting…</div>
+      <div class="stat-grid">
+        <div class="stat"><span class="label">tick</span><span class="value" id="s-tick">–</span></div>
+        <div class="stat"><span class="label">population</span><span class="value" id="s-pop">–</span></div>
+        <div class="stat"><span class="label">food</span><span class="value" id="s-food">–</span></div>
+        <div class="stat"><span class="label">best gen</span><span class="value cyan" id="s-bestgen">–</span></div>
+        <div class="stat"><span class="label">avg gen</span><span class="value cyan" id="s-avggen">–</span></div>
+        <div class="stat"><span class="label">avg energy</span><span class="value" id="s-avgenergy">–</span></div>
+        <div class="stat"><span class="label">avg age</span><span class="value" id="s-avgage">–</span></div>
+        <div class="stat"><span class="label">born</span><span class="value" id="s-born">–</span></div>
+        <div class="stat"><span class="label">died</span><span class="value amber" id="s-died">–</span></div>
+        <div class="stat"><span class="label">world age</span><span class="value" id="s-uptime">–</span></div>
+      </div>
+      <div id="chart-wrap">
+        <div id="chart-label"><span>population</span><span>~3 min window</span></div>
+        <canvas id="pop-chart" width="480" height="48"></canvas>
+      </div>
+    </section>
+
+    <section class="panel" id="tech-panel">
+      <div class="title">⚙ system parameters</div>
+      <div class="status">static — read once from <code>/config</code></div>
+
+      <div class="tech-group">
+        <div class="group-label">neural network (the genome)</div>
+        <div class="stat-grid">
+          <div class="stat"><span class="label">architecture</span><span class="value" id="t-arch">–</span></div>
+          <div class="stat"><span class="label">genome size</span><span class="value" id="t-genome">–</span></div>
+          <div class="stat"><span class="label">mutation rate</span><span class="value" id="t-mutrate">–</span></div>
+          <div class="stat"><span class="label">mutation strength</span><span class="value" id="t-mutstr">–</span></div>
+        </div>
+      </div>
+
+      <div class="tech-group">
+        <div class="group-label">world &amp; population</div>
+        <div class="stat-grid">
+          <div class="stat"><span class="label">world size</span><span class="value" id="t-world">–</span></div>
+          <div class="stat"><span class="label">tick interval</span><span class="value" id="t-tick">–</span></div>
+          <div class="stat"><span class="label">population bounds</span><span class="value" id="t-popbounds">–</span></div>
+          <div class="stat"><span class="label">max speed</span><span class="value" id="t-speed">–</span></div>
+        </div>
+      </div>
+
+      <div class="tech-group">
+        <div class="group-label">metabolism &amp; reproduction</div>
+        <div class="stat-grid">
+          <div class="stat"><span class="label">start energy</span><span class="value" id="t-startenergy">–</span></div>
+          <div class="stat"><span class="label">decay / tick</span><span class="value" id="t-decay">–</span></div>
+          <div class="stat"><span class="label">gain on eat</span><span class="value" id="t-eat">–</span></div>
+          <div class="stat"><span class="label">eat radius</span><span class="value" id="t-eatradius">–</span></div>
+          <div class="stat"><span class="label">reproduce at</span><span class="value" id="t-reprothresh">–</span></div>
+          <div class="stat"><span class="label">reproduce cost</span><span class="value" id="t-reprocost">–</span></div>
+          <div class="stat"><span class="label">reproduce chance</span><span class="value" id="t-reprochance">–</span></div>
+        </div>
+      </div>
+
+      <div class="tech-group">
+        <div class="group-label">food</div>
+        <div class="stat-grid">
+          <div class="stat"><span class="label">cap</span><span class="value" id="t-foodcap">–</span></div>
+          <div class="stat"><span class="label">initial seed</span><span class="value" id="t-foodinit">–</span></div>
+          <div class="stat"><span class="label">spawn chance</span><span class="value" id="t-foodspawn">–</span></div>
+        </div>
+      </div>
+    </section>
   </div>
 </div>
-<canvas id="world"></canvas>
 <script src="viewer.js"></script>
 </body>
 </html>

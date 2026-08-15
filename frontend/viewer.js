@@ -29,15 +29,21 @@ const el = {
 };
 const popChart = document.getElementById('pop-chart');
 const popChartCtx = popChart.getContext('2d');
+const stage = document.getElementById('stage');
 
+// The stage (not the window) owns the available space now that the
+// stats/tech panels live below the canvas instead of floating on top
+// of it. A ResizeObserver — rather than only a window 'resize' listener
+// — also catches the stage shrinking/growing when panel content changes
+// height (e.g. /config arriving after the canvas already rendered).
 function resize() {
-  const scale = Math.min(window.innerWidth / WORLD_W, window.innerHeight / WORLD_H);
+  const scale = Math.min(stage.clientWidth / WORLD_W, stage.clientHeight / WORLD_H);
   canvas.width = WORLD_W * scale;
   canvas.height = WORLD_H * scale;
   ctx.imageSmoothingEnabled = false;
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
 }
-window.addEventListener('resize', resize);
+new ResizeObserver(resize).observe(stage);
 resize();
 
 // --- Deterministic PRNG so the decorative meadow layout is stable
@@ -136,7 +142,12 @@ const SPRITE = [
   '.BBBBBBB.',
   '..BBBBB..',
 ];
-const PIXEL = 3;
+// Bumped up from the original 3px blocks — at typical viewport sizes
+// the creatures, food, and mood bubbles were reading as barely-visible
+// specks. This is a purely cosmetic render-scale change: world
+// coordinates (WORLD_W/WORLD_H) and gameplay constants like EAT_RADIUS
+// are untouched, so simulation balance doesn't shift.
+const PIXEL = 5;
 const SPRITE_W = SPRITE[0].length * PIXEL;
 const SPRITE_H = SPRITE.length * PIXEL;
 
@@ -171,17 +182,17 @@ function drawFood(f) {
   const isBerry = f.id % 2 === 0;
   if (isBerry) {
     ctx.fillStyle = '#c23b3b';
-    for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) {
-      ctx.fillRect(f.x + dx - 1, f.y + dy - 1, 3, 3);
+    for (const [dx, dy] of [[-4, 0], [4, 0], [0, -4], [0, 4]]) {
+      ctx.fillRect(f.x + dx - 2, f.y + dy - 2, 5, 5);
     }
     ctx.fillStyle = '#3f8a3f';
-    ctx.fillRect(f.x - 1, f.y - 5, 2, 3);
+    ctx.fillRect(f.x - 2, f.y - 9, 3, 5);
   } else {
     ctx.fillStyle = '#e3d2a3';
-    ctx.fillRect(f.x - 1, f.y - 1, 2, 5);
+    ctx.fillRect(f.x - 2, f.y - 2, 3, 9);
     ctx.fillStyle = '#b5473f';
     ctx.beginPath();
-    ctx.ellipse(f.x, f.y - 3, 4, 3, 0, Math.PI, 0);
+    ctx.ellipse(f.x, f.y - 5, 7, 5, 0, Math.PI, 0);
     ctx.fill();
   }
 }
@@ -228,9 +239,9 @@ function drawMood(c) {
   else if (c.energy < 25) emoji = '🍎';
 
   if (!emoji) return;
-  ctx.font = '11px system-ui, sans-serif';
+  ctx.font = '18px system-ui, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(emoji, c.x, c.y - SPRITE_H / 2 - 4);
+  ctx.fillText(emoji, c.x, c.y - SPRITE_H / 2 - 6);
 }
 
 let latest = null;
@@ -251,6 +262,62 @@ function formatWorldAge(tick) {
   if (m > 0) return `${m}m ${s}s`;
   return `${s}s`;
 }
+
+// Technical panel: fetched once from the backend's single source of
+// truth (GET /config) rather than hand-copied here, so it can't drift
+// out of sync with the actual running simulation constants.
+const techEl = {
+  arch: document.getElementById('t-arch'),
+  genome: document.getElementById('t-genome'),
+  mutRate: document.getElementById('t-mutrate'),
+  mutStr: document.getElementById('t-mutstr'),
+  world: document.getElementById('t-world'),
+  tick: document.getElementById('t-tick'),
+  popBounds: document.getElementById('t-popbounds'),
+  speed: document.getElementById('t-speed'),
+  startEnergy: document.getElementById('t-startenergy'),
+  decay: document.getElementById('t-decay'),
+  eat: document.getElementById('t-eat'),
+  eatRadius: document.getElementById('t-eatradius'),
+  reproThresh: document.getElementById('t-reprothresh'),
+  reproCost: document.getElementById('t-reprocost'),
+  reproChance: document.getElementById('t-reprochance'),
+  foodCap: document.getElementById('t-foodcap'),
+  foodInit: document.getElementById('t-foodinit'),
+  foodSpawn: document.getElementById('t-foodspawn'),
+};
+
+async function loadConfig() {
+  try {
+    const res = await fetch('/config');
+    const cfg = await res.json();
+
+    techEl.arch.textContent = `${cfg.network.inputs} → ${cfg.network.hidden} → ${cfg.network.outputs}`;
+    techEl.genome.textContent = `${cfg.network.genomeSize} weights`;
+    techEl.mutRate.textContent = `${Math.round(cfg.network.mutationRate * 100)}% / weight`;
+    techEl.mutStr.textContent = `±${cfg.network.mutationStrength}`;
+
+    techEl.world.textContent = `${cfg.world.width} × ${cfg.world.height}`;
+    techEl.tick.textContent = `${cfg.tickIntervalMs}ms (~${(1000 / cfg.tickIntervalMs).toFixed(1)}/s)`;
+    techEl.popBounds.textContent = `${cfg.population.min} – ${cfg.population.max}`;
+    techEl.speed.textContent = `${cfg.movement.maxSpeed}/tick`;
+
+    techEl.startEnergy.textContent = cfg.energy.start;
+    techEl.decay.textContent = `−${cfg.energy.decayPerTick}`;
+    techEl.eat.textContent = `+${cfg.energy.gainOnEat}`;
+    techEl.eatRadius.textContent = `${cfg.food.eatRadius}px`;
+    techEl.reproThresh.textContent = `${cfg.energy.reproduceThreshold} energy`;
+    techEl.reproCost.textContent = cfg.energy.reproduceCost;
+    techEl.reproChance.textContent = `${Math.round(cfg.energy.reproduceChancePerTick * 100)}% / tick`;
+
+    techEl.foodCap.textContent = cfg.food.cap;
+    techEl.foodInit.textContent = cfg.food.initial;
+    techEl.foodSpawn.textContent = `${Math.round(cfg.food.spawnChance * 100)}% / tick`;
+  } catch (err) {
+    console.error('Failed to load /config', err);
+  }
+}
+loadConfig();
 
 function connect() {
   const protocol = location.protocol === 'https:' ? 'wss' : 'ws';

@@ -20,8 +20,13 @@ function randomGenome() {
 }
 
 // Mutation is the only source of variation for now (asexual reproduction).
-// `rate` = probability each weight gets nudged, `strength` = max nudge size.
-function mutate(genome, rate = 0.12, strength = 0.4) {
+// MUTATION_RATE = probability each weight gets nudged, MUTATION_STRENGTH =
+// max nudge size. Named constants (rather than bare defaults) so the
+// technical panel on the frontend can report the real values via /config.
+const MUTATION_RATE = 0.12;
+const MUTATION_STRENGTH = 0.4;
+
+function mutate(genome, rate = MUTATION_RATE, strength = MUTATION_STRENGTH) {
   const child = Float32Array.from(genome);
   for (let i = 0; i < child.length; i++) {
     if (Math.random() < rate) {
@@ -57,4 +62,14 @@ function forward(genome, inputs) {
   return out;
 }
 
-module.exports = { INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE, genomeSize, randomGenome, mutate, forward };
+module.exports = {
+  INPUT_SIZE,
+  HIDDEN_SIZE,
+  OUTPUT_SIZE,
+  MUTATION_RATE,
+  MUTATION_STRENGTH,
+  genomeSize,
+  randomGenome,
+  mutate,
+  forward,
+};
