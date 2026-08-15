@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: glimmerlings
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: glimmerlings
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [internal]
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on: [postgres]
+    environment:
+      DATABASE_URL: postgres://glimmerlings:${POSTGRES_PASSWORD}@postgres:5432/glimmerlings
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    networks: [internal]
+
+  # Exposes the backend to the internet without opening any port on the
+  # router or revealing the home IP. Requires a tunnel token from the
+  # Cloudflare Zero Trust dashboard — see README for setup steps.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on: [backend]
+    networks: [internal]
+
+networks:
+  internal:
+
+volumes:
+  pgdata:

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Glimmerlings — żywy ekosystem</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b1a12; overflow: hidden; }
+  body { font-family: system-ui, sans-serif; color: #eaf5ea; }
+  #hud {
+    position: absolute; top: 12px; left: 12px;
+    background: rgba(0, 0, 0, 0.5); padding: 8px 14px; border-radius: 8px;
+    font-size: 14px; line-height: 1.5; backdrop-filter: blur(2px);
+  }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<div id="hud">Łączenie z ekosystemem…</div>
+<canvas id="world"></canvas>
+<script src="viewer.js"></script>
+</body>
+</html>
