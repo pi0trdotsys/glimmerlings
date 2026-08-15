@@ -25,7 +25,7 @@ async function main() {
   }
 
   const app = express();
-  app.use(express.static(path.join(__dirname, '..', '..', 'frontend')));
+  app.use(express.static(path.join(__dirname, '..', 'frontend')));
   app.get('/health', (_req, res) =>
     res.json({ ok: true, tick: world.tick, population: world.creatures.length })
   );

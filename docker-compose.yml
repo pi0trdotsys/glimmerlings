@@ -11,7 +11,9 @@ services:
     networks: [internal]
 
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     restart: unless-stopped
     depends_on: [postgres]
     environment:
