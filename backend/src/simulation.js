@@ -7,15 +7,30 @@ const { randomGenome, mutate, forward } = require('./neuralNet');
 const WORLD_W = 1200;
 const WORLD_H = 800;
 const START_POPULATION = 30;
+const START_ENERGY = 60;
 const MAX_FOOD = 60;
-const FOOD_SPAWN_CHANCE = 0.08; // probability per tick
-const ENERGY_DECAY = 0.15;
+// Enough of a head start that generation zero isn't starving in an
+// empty world, but not so much that the population booms past what
+// the ongoing food-spawn rate can sustain and then crashes correcting
+// for it. ~40% of the cap approaches the steady state gently instead
+// of overshooting it.
+const INITIAL_FOOD = Math.round(MAX_FOOD * 0.4);
+const FOOD_SPAWN_CHANCE = 0.1; // probability per tick
+const ENERGY_DECAY = 0.1;
 const EAT_ENERGY = 30;
-const REPRODUCE_THRESHOLD = 80;
-const REPRODUCE_COST = 50;
+const REPRODUCE_THRESHOLD = 70;
+const REPRODUCE_COST = 40;
+// A creature above threshold reproduces with this probability *per tick*
+// rather than the instant it crosses the line. Without this, an entire
+// cohort that started at the same energy crosses the threshold on the
+// same tick, reproduces in lockstep, and their children do the same a
+// generation later — a synchronized boom-then-bust oscillation. Spreading
+// the roll out over time turns that into a smooth, continuous trickle.
+const REPRODUCE_CHANCE = 0.15;
 const MAX_SPEED = 2.2;
 const MAX_POPULATION = 150;
-const EAT_RADIUS = 12;
+const MIN_POPULATION = 12;
+const EAT_RADIUS = 16;
 
 let nextId = 1;
 
@@ -28,7 +43,9 @@ function newCreature(genome, x, y, generation) {
     id: nextId++,
     x,
     y,
-    energy: 50,
+    // +/-15 jitter so a whole cohort doesn't hit the reproduce/starve
+    // thresholds on the same tick and lurch through life in lockstep.
+    energy: START_ENERGY + (Math.random() * 30 - 15),
     age: 0,
     generation,
     genome,
@@ -42,10 +59,18 @@ function createWorld() {
     const pos = randomPosition();
     creatures.push(newCreature(randomGenome(), pos.x, pos.y, 0));
   }
+  // Seed food up front. Random, un-evolved brains are little better than
+  // aimless wanderers, so an empty world that only fills up gradually
+  // starves most of generation zero before selection ever gets a say.
+  const food = [];
+  for (let i = 0; i < INITIAL_FOOD; i++) {
+    const pos = randomPosition();
+    food.push({ id: nextId++, x: pos.x, y: pos.y });
+  }
   return {
     tick: 0,
     creatures,
-    food: [],
+    food,
     stats: { totalBorn: creatures.length, totalDied: 0, bestGeneration: 0 },
   };
 }
@@ -132,6 +157,7 @@ function tick(world) {
 
     if (
       creature.energy >= REPRODUCE_THRESHOLD &&
+      Math.random() < REPRODUCE_CHANCE &&
       world.creatures.length + children.length < MAX_POPULATION
     ) {
       creature.energy -= REPRODUCE_COST;
@@ -146,12 +172,15 @@ function tick(world) {
   world.stats.totalDied += world.creatures.length - survivors.length;
   world.creatures = survivors.concat(children);
 
-  // Never let the population go fully extinct — reseed if it does.
-  if (world.creatures.length === 0) {
-    for (let i = 0; i < 10; i++) {
-      const pos = randomPosition();
-      world.creatures.push(newCreature(randomGenome(), pos.x, pos.y, 0));
-    }
+  // Ecological rescue effect: gen-zero brains are random, so most early
+  // lineages are bad at this and a thin population is one unlucky patch
+  // away from silently dying out for good — which would also end any
+  // chance of a better lineage ever emerging. Real metapopulations avoid
+  // this via immigration; here that means topping up with a few more
+  // fresh, unrelated genomes instead of waiting for a hard zero.
+  while (world.creatures.length < MIN_POPULATION) {
+    const pos = randomPosition();
+    world.creatures.push(newCreature(randomGenome(), pos.x, pos.y, 0));
   }
 
   return world;
